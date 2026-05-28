@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, devtools, persist, subscribeWithSelector } from 'zustand/middleware';
 
 import type { StateStorage } from 'zustand/middleware';
+import { toUnixMs } from './persistence';
 
 export interface User {
   id: string;
@@ -24,7 +25,8 @@ interface AppState {
   isLoading: boolean;
   error: string | null;
   setUser: (user: User | null) => void;
-  setTokens: (accessToken: string, refreshToken: string, expiresAt: number) => void;
+  setTheme: (theme: 'light' | 'dark') => void;
+  setTokens: (accessToken: string, refreshToken: string, expiresAt: number | Date) => void;
   setSessionExpiringSoon: (isExpiringSoon: boolean) => void;
   setAuthLoading: (isAuthLoading: boolean) => void;
   setAuthError: (authError: string | null) => void;
@@ -66,8 +68,16 @@ export const useAppStore = create<AppState>()(
         error: null,
         setUser: user => set({ user, isAuthenticated: !!user }, false, 'setUser'),
         setTokens: (accessToken, refreshToken, sessionExpiresAt) =>
-          set({ accessToken, refreshToken, sessionExpiresAt }, false, 'setTokens'),
-        setSessionExpiringSoon: sessionExpiringSoon =>
+          set(
+            {
+              accessToken,
+              refreshToken,
+              sessionExpiresAt: toUnixMs(sessionExpiresAt),
+            },
+            false,
+            'setTokens'
+          ),
+        setSessionExpiringSoon: (sessionExpiringSoon) =>
           set({ sessionExpiringSoon }, false, 'setSessionExpiringSoon'),
         setAuthLoading: isAuthLoading => set({ isAuthLoading }, false, 'setAuthLoading'),
         setAuthError: authError => set({ authError }, false, 'setAuthError'),
@@ -102,8 +112,18 @@ export const useAppStore = create<AppState>()(
           isAuthenticated: state.isAuthenticated,
           accessToken: state.accessToken,
           refreshToken: state.refreshToken,
-          sessionExpiresAt: state.sessionExpiresAt,
+          sessionExpiresAt: toUnixMs(state.sessionExpiresAt),
+          theme: state.theme,
         }),
+        merge: (persistedState, currentState) => {
+          const hydratedState = (persistedState ?? {}) as Partial<AppState>;
+
+          return {
+            ...currentState,
+            ...hydratedState,
+            sessionExpiresAt: toUnixMs(hydratedState.sessionExpiresAt),
+          };
+        },
       }
     ),
     { name: 'AppStore' }

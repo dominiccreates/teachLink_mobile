@@ -1,11 +1,11 @@
+import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react-native';
 import React from 'react';
-import { StatusBar, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppText, MobileSettings } from '../../components';
 import { useDynamicFontSize } from '../../hooks';
-import { useUiStore } from '../../store/uiStore';
 
 interface SettingsPageProps {
   /** Callback for the back-navigation button in the header. */
@@ -28,47 +28,35 @@ const SettingsPage = ({
   onSignOut,
   onChangePassword,
   onLinkedAccounts,
-}: SettingsPageProps): React.JSX.Element => {
-  const { theme } = useUiStore();
-  const isDark = theme === 'dark';
+}: SettingsPageProps) => {
   const { scale } = useDynamicFontSize();
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50 dark:bg-gray-900" edges={['top']}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
-      />
+    <SafeAreaView className="flex-1 bg-themeBg" edges={['top']}>
+      <StatusBar style="auto" />
 
       {/* ── Header ──────────────────────────────────────────── */}
-      <View className="flex-row items-center px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <View className="flex-row items-center border-b border-themeBorder bg-themeBg px-4 py-3">
         {onBack ? (
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onBack}
-            className="w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-gray-800 mr-3"
+            className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-themeCard"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ArrowLeft size={scale(20)} color={isDark ? '#e5e7eb' : '#374151'} />
+            <ArrowLeft size={scale(20)} color="currentColor" className="text-themeText" />
           </TouchableOpacity>
         ) : (
-          <View className="w-9 h-9 items-center justify-center rounded-full bg-white dark:bg-gray-800 mr-3">
-            <SettingsIcon size={scale(20)} color={isDark ? '#19c3e6' : '#19c3e6'} />
+          <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-themeCard">
+            <SettingsIcon size={scale(20)} color="currentColor" className="text-themePrimary" />
           </View>
         )}
 
         <View className="flex-1">
-          <AppText
-            style={{ fontSize: 20 }}
-            className="font-bold text-gray-900 dark:text-white"
-          >
+          <AppText style={{ fontSize: 20 }} className="font-bold text-themeText">
             Settings
           </AppText>
-          <AppText
-            style={{ fontSize: 12 }}
-            className="text-gray-500 dark:text-gray-400"
-          >
+          <AppText style={{ fontSize: 12 }} className="text-themeTextMuted">
             Manage your account &amp; preferences
           </AppText>
         </View>
