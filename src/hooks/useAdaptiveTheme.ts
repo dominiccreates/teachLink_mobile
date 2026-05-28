@@ -2,8 +2,8 @@ import { LightSensor } from 'expo-sensors';
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
-import { useAppStore } from '../store';
 import { useSettingsStore } from '../store/settingsStore';
+import { useUiStore } from '../store/uiStore';
 
 export const DARK_LUX_THRESHOLD = 25;
 export const LIGHT_LUX_THRESHOLD = 75;
@@ -61,7 +61,7 @@ export function advanceDebounce(
 
 export function useAdaptiveTheme(): void {
   const adaptiveThemeEnabled = useSettingsStore((s) => s.adaptiveThemeEnabled);
-  const setTheme = useAppStore((s) => s.setTheme);
+  const setTheme = useUiStore((s) => s.setTheme);
 
   const debounceRef = useRef<DebounceState>({ candidate: null, consecutiveCount: 0 });
   const subscriptionRef = useRef<{ remove: () => void } | null>(null);
@@ -77,7 +77,7 @@ export function useAdaptiveTheme(): void {
     };
 
     const handleReading = (lux: number) => {
-      const currentTheme = useAppStore.getState().theme;
+      const currentTheme = useUiStore.getState().theme;
       const { state, confirmedTheme } = advanceDebounce(debounceRef.current, lux, currentTheme);
       debounceRef.current = state;
       if (confirmedTheme) {

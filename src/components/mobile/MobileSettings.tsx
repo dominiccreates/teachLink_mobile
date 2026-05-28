@@ -1,12 +1,3 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
 
 import {
   BarChart2,
@@ -30,16 +21,25 @@ import {
   RefreshCw,
   Fingerprint as FingerprintPattern,
 } from 'lucide-react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 
-import { useAppStore } from '../../store';
-import { useNotificationStore } from '../../store/notificationStore';
-import { useSettingsStore } from '../../store/settingsStore';
-import { useBiometricAuth } from '../../hooks/useBiometricAuth';
-import { useDynamicFontSize } from '../../hooks';
 
 import { NativeToggle } from './NativeToggle';
 import { PickerOption, SettingsPicker } from './SettingsPicker';
 import { SettingsSection } from './SettingsSection';
+import { useDynamicFontSize } from '../../hooks';
+import { useBiometricAuth } from '../../hooks/useBiometricAuth';
+import { useNotificationStore } from '../../store/notificationStore';
+import { useSettingsStore } from '../../store/settingsStore';
+import { useUiStore } from '../../store/uiStore';
 import { AppText } from '../common/AppText';
 
 // ─────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ interface SettingRowProps {
   destructive?: boolean;
 }
 
-function SettingRow({
+const SettingRow = ({
   icon,
   iconBg = 'bg-gray-100 dark:bg-gray-700',
   label,
@@ -64,7 +64,7 @@ function SettingRow({
   right,
   onPress,
   destructive = false,
-}: SettingRowProps) {
+}: SettingRowProps) => {
   const Row = onPress ? TouchableOpacity : View;
   const { scale } = useDynamicFontSize();
 
@@ -139,12 +139,12 @@ const FONT_SIZE_OPTIONS: PickerOption[] = [
 // Component
 // ─────────────────────────────────────────────────────────────
 
-export function MobileSettings({
+export const MobileSettings = ({
   onSignOut,
   onChangePassword,
   onLinkedAccounts,
-}: any) {
-  const { theme, setTheme } = useAppStore();
+}: any) => {
+  const { theme, setTheme } = useUiStore();
   const { preferences, setPreference } = useNotificationStore();
 
   const {

@@ -50,8 +50,12 @@ interface AchievementState {
   achievements: Achievement[];
   /** Number of unlocked achievements */
   unlockedCount: number;
-  
+  /** Whether achievements have been loaded */
+  isLoaded: boolean;
+
   // Actions
+  /** Load achievements — initializes with defaults if not yet persisted */
+  loadAchievements: () => void;
   /** Unlock an achievement by ID */
   unlockAchievement: (id: string) => void;
   /** Update progress on an achievement */
@@ -144,8 +148,19 @@ export const DEFAULT_ACHIEVEMENTS: Achievement[] = [
 export const useAchievementStore = create<AchievementState>()(
   persist(
     (set, get) => ({
-      achievements: DEFAULT_ACHIEVEMENTS,
+      achievements: [],
       unlockedCount: 0,
+      isLoaded: false,
+
+      loadAchievements: () => {
+        const { isLoaded, achievements } = get();
+        if (isLoaded) return;
+        // If persisted achievements exist, keep them; otherwise seed defaults
+        set({
+          achievements: achievements.length > 0 ? achievements : DEFAULT_ACHIEVEMENTS,
+          isLoaded: true,
+        });
+      },
 
       unlockAchievement: (id: string) =>
         set((state) => {
@@ -230,6 +245,7 @@ export const useAchievementStore = create<AchievementState>()(
       partialize: (state) => ({
         achievements: state.achievements,
         unlockedCount: state.unlockedCount,
+        isLoaded: state.isLoaded,
       }),
     }
   )

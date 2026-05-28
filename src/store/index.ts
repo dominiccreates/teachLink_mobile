@@ -21,11 +21,9 @@ interface AppState {
   refreshToken: string | null;
   sessionExpiresAt: number | null;
   sessionExpiringSoon: boolean;
-  theme: 'light' | 'dark';
   isLoading: boolean;
   error: string | null;
   setUser: (user: User | null) => void;
-  setTheme: (theme: 'light' | 'dark') => void;
   setTokens: (accessToken: string, refreshToken: string, expiresAt: number) => void;
   setSessionExpiringSoon: (isExpiringSoon: boolean) => void;
   setAuthLoading: (isAuthLoading: boolean) => void;
@@ -64,11 +62,9 @@ export const useAppStore = create<AppState>()(
         refreshToken: null,
         sessionExpiresAt: null,
         sessionExpiringSoon: false,
-        theme: 'light',
         isLoading: false,
         error: null,
         setUser: (user) => set({ user, isAuthenticated: !!user }, false, 'setUser'),
-        setTheme: (theme) => set({ theme }, false, 'setTheme'),
         setTokens: (accessToken, refreshToken, sessionExpiresAt) =>
           set({ accessToken, refreshToken, sessionExpiresAt }, false, 'setTokens'),
         setSessionExpiringSoon: (sessionExpiringSoon) =>
@@ -107,7 +103,6 @@ export const useAppStore = create<AppState>()(
           accessToken: state.accessToken,
           refreshToken: state.refreshToken,
           sessionExpiresAt: state.sessionExpiresAt,
-          theme: state.theme,
         }),
       }
     ),
@@ -117,3 +112,4 @@ export const useAppStore = create<AppState>()(
 
 export * from './notificationStore';
 export * from './courseProgressStore';
+export * from './uiStore';

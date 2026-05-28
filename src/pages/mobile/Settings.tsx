@@ -2,9 +2,10 @@ import { ArrowLeft, Settings as SettingsIcon } from 'lucide-react-native';
 import React from 'react';
 import { StatusBar, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { AppText, MobileSettings } from '../../components';
 import { useDynamicFontSize } from '../../hooks';
-import { useAppStore } from '../../store';
+import { useUiStore } from '../../store/uiStore';
 
 interface SettingsPageProps {
   /** Callback for the back-navigation button in the header. */
@@ -22,13 +23,13 @@ interface SettingsPageProps {
  * component as its body. Can be used inside any React Navigation stack or
  * rendered standalone.
  */
-export default function SettingsPage({
+const SettingsPage = ({
   onBack,
   onSignOut,
   onChangePassword,
   onLinkedAccounts,
-}: SettingsPageProps) {
-  const { theme } = useAppStore();
+}: SettingsPageProps): React.JSX.Element => {
+  const { theme } = useUiStore();
   const isDark = theme === 'dark';
   const { scale } = useDynamicFontSize();
 
@@ -81,4 +82,6 @@ export default function SettingsPage({
       />
     </SafeAreaView>
   );
-}
+};
+
+export default SettingsPage;
