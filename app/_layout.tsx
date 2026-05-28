@@ -12,6 +12,10 @@ import { useDeepLink } from '../src/hooks/useDeepLink';
 import { sessionRestorationService } from '../src/services/sessionRestoration';
 import { useAppStore } from '../src/store';
 import { getPathFromDeepLink } from '../src/utils/linkParser';
+import { prefetchExternalResources } from '../src/utils/resourceHints';
+
+// Kick off resource hints as early as possible — fire-and-forget, never blocks startup.
+prefetchExternalResources();
 
 // Component to handle auto screen tracking and session state persistence
 const ScreenTracker = () => {
