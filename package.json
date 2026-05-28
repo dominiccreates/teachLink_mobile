@@ -117,7 +117,7 @@
   },
   "private": true,
   "lint-staged": {
-    "src/services/socket/index.ts": [
+    "**/*.{js,jsx,ts,tsx}": [
       "prettier --write",
       "eslint --max-warnings=0"
     ],
