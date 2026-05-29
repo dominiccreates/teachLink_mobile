@@ -1,4 +1,5 @@
 export * from './useFormCache';
+export * from './useFormValidation';
 export * from './useAdaptiveFrameRate';
 export * from './useAdaptiveTheme';
 export * from './useAnalytics';
@@ -32,3 +33,4 @@ export { useOptimizedSwipe, OptimizedSwipeView } from './useOptimizedSwipe';
 export { useOptimizedVideoGestures, OptimizedVideoGesturesView } from './useOptimizedVideoGestures';
 
 export * from './useDebounce';
+export * from './usePredictivePreload';
