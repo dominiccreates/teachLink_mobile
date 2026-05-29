@@ -4,25 +4,6 @@ import React from 'react';
 import LessonCarousel from '../../src/components/mobile/LessonCarousel';
 import { MobileSearch } from '../../src/components/mobile/MobileSearch';
 
-// ── Intercept Layout Engine Collisions ──────────────────────────────────────
-
-// Force intercept component creation globally across this file. This prevents
-// react-native-css-interop from executing dynamic property evaluation crashes
-// on uninitialized layout wrappers.
-const originalCreateElement = React.createElement;
-(React as any).createElement = function (type: any, props: any, ...children: any[]) {
-  const typeName = type && (type.displayName || type.name || '');
-  if (
-    typeName === 'KeyboardAvoidingView' ||
-    typeName === 'SafeAreaView' ||
-    typeName === 'SafeAreaProvider' ||
-    (typeof type === 'string' && (type === 'KeyboardAvoidingView' || type === 'SafeAreaView'))
-  ) {
-    return originalCreateElement('View', props, ...children);
-  }
-  return originalCreateElement(type, props, ...children);
-};
-
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 jest.mock('react-native-safe-area-context', () => {
@@ -43,17 +24,35 @@ jest.mock('lucide-react-native', () => ({
   SlidersHorizontal: () => null,
 }));
 
+const mockTrackEvent = jest.fn();
+
+// Mock only necessary hooks, require actual useDebounce / useDebounceCallback
 jest.mock('../../src/hooks', () => {
   const actual = jest.requireActual('../../src/hooks/useDebounce');
   return {
     ...actual,
     useAnalytics: () => ({
-      trackEvent: jest.fn(),
+      trackEvent: mockTrackEvent,
     }),
     useDynamicFontSize: () => ({
       scale: (x: number) => x,
     }),
-    useMemoryMonitor: jest.fn(),
+    useMemoryMonitor: () => ({
+      isHighMemory: false,
+      isCriticalMemory: false,
+    }),
+  };
+});
+
+jest.mock('../../src/hooks/useAnalytics', () => {
+  return {
+    __esModule: true,
+    default: () => ({
+      trackEvent: mockTrackEvent,
+    }),
+    useAnalytics: () => ({
+      trackEvent: mockTrackEvent,
+    }),
   };
 });
 

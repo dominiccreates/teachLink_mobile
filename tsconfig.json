@@ -7,11 +7,19 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
-    "lib": ["ES2015", "ES2017", "DOM"],
+
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/components/*": ["./src/components/*", "./components/*"],
+      "@/hooks/*": ["./src/hooks/*", "./hooks/*"],
+      "@/constants/*": ["./constants/*"],
+      "@/*": ["./*"]
+    },
+    "lib": ["ESNext", "DOM"],
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "bundler",
+    "types": ["jest", "node"]
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"],
+  "exclude": ["node_modules"]
 }
