@@ -8,7 +8,10 @@ import 'react-native-reanimated';
 import { MemoryProfilerOverlay } from '../components/DevTools';
 import { RetryErrorBoundary } from '../components/ErrorBoundary/RetryErrorBoundary';
 import '../global.css'; // NativeWind CSS
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8915866 (chore: improve documentation and developer setup guide for TeachLink Mobile)
 import { AnalyticsProvider, ErrorBoundary, OfflineIndicatorProvider } from '../src/components';
 import { KeyboardDelegateProvider } from '../src/components/common/KeyboardDelegateProvider';
 import { useAnalytics } from '../src/hooks';
@@ -41,6 +44,11 @@ const ScreenTracker = () => {
   useEffect(() => {
     if (pathname) {
       trackScreen(pathname, { segments: segments.join('/') });
+<<<<<<< HEAD
+=======
+
+      // Track and record transitions + trigger predictive preloading
+>>>>>>> 8915866 (chore: improve documentation and developer setup guide for TeachLink Mobile)
 
       // Track and record transitions + trigger predictive preloading
       if (prevPathname.current !== pathname) {
@@ -138,6 +146,7 @@ const RootLayout = () => {
   return (
     <ErrorBoundary boundaryName="RootLayout">
       <RetryErrorBoundary>
+<<<<<<< HEAD
         {/*
          * KeyboardDelegateProvider mounts exactly ONE pair of Keyboard
          * listeners (show + hide) for the entire app.  All screens read
@@ -156,6 +165,18 @@ const RootLayout = () => {
             {__DEV__ && <MemoryProfilerOverlay />}
           </AnalyticsProvider>
         </KeyboardDelegateProvider>
+=======
+        <AnalyticsProvider>
+          <ScreenTracker />
+          <ThemeSync />
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <OfflineIndicatorProvider>
+              <Stack />
+            </OfflineIndicatorProvider>
+          </GestureHandlerRootView>
+          <MemoryProfilerOverlay />
+        </AnalyticsProvider>
+>>>>>>> 8915866 (chore: improve documentation and developer setup guide for TeachLink Mobile)
       </RetryErrorBoundary>
     </ErrorBoundary>
   );
