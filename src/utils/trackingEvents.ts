@@ -38,6 +38,11 @@ export enum AnalyticsEvent {
   PERFORMANCE_METRIC = 'performance_metric',
   API_ERROR = 'api_error',
   CRASH_REPORT = 'crash_report',
+
+  // Resource Timing (Issue #34)
+  API_TIMING = 'api_timing',
+  IMAGE_TIMING = 'image_timing',
+  RESOURCE_TIMING_SUMMARY = 'resource_timing_summary',
 }
 
 /**
@@ -72,4 +77,18 @@ export enum PerformanceMetric {
   APP_LOAD_TIME = 'app_load_time',
   SCREEN_TRANSITION_TIME = 'screen_transition_time',
   API_RESPONSE_TIME = 'api_response_time',
+}
+
+/**
+ * Resource timing metric names for structured reporting.
+ */
+export enum ResourceTimingMetric {
+  API_DURATION = 'api_duration',
+  IMAGE_LOAD_DURATION = 'image_load_duration',
+  API_P50 = 'api_p50',
+  API_P95 = 'api_p95',
+  IMAGE_P50 = 'image_p50',
+  IMAGE_P95 = 'image_p95',
+  API_ERROR_RATE = 'api_error_rate',
+  IMAGE_ERROR_RATE = 'image_error_rate',
 }
