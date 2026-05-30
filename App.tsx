@@ -14,6 +14,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { setupNotificationNavigation } from './src/navigation/linking';
 import { apiClient } from './src/services/api';
 import { crashReportingService } from './src/services/cashReporting';
+import { memoryPressureService } from './src/services/memoryPressureService';
 import { mobileAuthService } from './src/services/mobileAuth';
 import {
   addNotificationReceivedListener,
@@ -119,6 +120,9 @@ const App = () => {
 
     // Connect to socket when app starts
     socketService.connect();
+
+    // Start memory pressure protection early
+    memoryPressureService.init();
 
     // Initialize push notifications: request permissions and get device token
     registerForPushNotifications().then(async (token) => {
