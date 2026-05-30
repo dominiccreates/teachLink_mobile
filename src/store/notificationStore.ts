@@ -122,9 +122,7 @@ export const useNotificationStore = create<NotificationState>()(
 
           const isDuplicate = recentHistory.some(entry => entry.fingerprint === fingerprint);
           if (isDuplicate) {
-            return {
-              notificationHistory: [{ fingerprint, receivedAt: now }, ...recentHistory].slice(0, 200),
-            };
+            return {};
           }
 
           const groupKey = buildNotificationGroupKey(notification.type, notification.data);

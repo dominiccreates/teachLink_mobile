@@ -3,7 +3,12 @@ import { Platform } from 'react-native';
 
 import { appLogger } from '../utils/logger';
 
-const logger = appLogger;
+const logger = {
+  info: (message: string, meta?: any) => (appLogger || console).info(message, meta),
+  warn: (message: string, meta?: any) => (appLogger || console).warn(message, meta),
+  error: (message: string, error?: any, meta?: any) => (appLogger || console).error(message, error, meta),
+  debug: (message: string, meta?: any) => (appLogger || console).debug(message, meta),
+};
 
 // ─── Security Documentation ───────────────────────────────────────────────────
 /**
@@ -93,7 +98,7 @@ async function verifySecureStorageAvailable(): Promise<void> {
     logger.info(`✅ SecureStorage verification passed on ${Platform.OS}`);
   } catch (error) {
     const errorMsg = `❌ CRITICAL: SecureStorage verification failed on ${Platform.OS}: ${error instanceof Error ? error.message : String(error)}`;
-    logger.error(errorMsg);
+    logger.error(errorMsg, error instanceof Error ? error : new Error(String(error)));
     throw new Error(errorMsg);
   }
 }

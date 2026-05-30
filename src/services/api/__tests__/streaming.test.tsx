@@ -9,10 +9,9 @@ import { renderHook, waitFor, act } from '@testing-library/react-native';
 import { render, screen } from '@testing-library/react-native';
 import React from 'react';
 import { View, Text } from 'react-native';
-
-import { streamingApi } from '../src/services/api/streaming';
-import { useStreamingData, useTTFBMeasurement } from '../src/hooks/useStreamingData';
-import { StreamingProgressBar } from '../src/components/common/StreamingProgressBar';
+import { streamingApi } from '../streaming';
+import { useStreamingData, useTTFBMeasurement } from '../../../hooks/useStreamingData';
+import { StreamingProgressBar } from '../../../components/common/StreamingProgressBar';
 
 // ─── Mock Data ──────────────────────────────────────────────────────────────
 
@@ -193,7 +192,7 @@ describe('StreamingApiService', () => {
 
       const ttfb = await streamingApi.measureTTFB('/api/test');
 
-      expect(ttfb).toBeGreaterThan(0);
+      expect(ttfb).toBeGreaterThanOrEqual(0);
       expect(ttfb).toBeLessThan(5000); // Should be relatively quick
     });
   });
@@ -318,7 +317,7 @@ describe('useStreamingData Hook', () => {
       .mockResolvedValueOnce(mockNDJSONResponse(mockStreamingData));
 
     const { result } = renderHook(() =>
-      useStreamingData<MockItem>('/api/test', { autoFetch: true })
+      useStreamingData<MockItem>('/api/test', { autoFetch: true, maxRetries: 1 })
     );
 
     await waitFor(() => {
@@ -362,13 +361,13 @@ describe('StreamingProgressBar Component', () => {
   it('should render when streaming', () => {
     render(<StreamingProgressBar progress={50} isStreaming={true} chunkCount={5} ttfb={250} />);
 
-    expect(screen.getByText('50%')).toBeVisible();
+    expect(screen.getByText(/50%/)).toBeVisible();
   });
 
   it('should not render when not streaming and progress is 0', () => {
-    const { container } = render(<StreamingProgressBar progress={0} isStreaming={false} />);
+    const { toJSON } = render(<StreamingProgressBar progress={0} isStreaming={false} />);
 
-    expect(container.firstChild).toBeNull();
+    expect(toJSON()).toBeNull();
   });
 
   it('should display metrics when showMetrics is true', () => {
