@@ -22,6 +22,9 @@ import { appLogger } from './src/utils/logger';
 import { prefetchExternalResources } from './src/utils/resourceHints';
 import { mobileAnalyticsService } from './src/services/mobileAnalytics';
 import { AnalyticsEvent, PerformanceMetric } from './src/utils/trackingEvents';
+import { batteryService } from './src/services/batteryService';
+import { startupProgressService } from './src/services/startupProgressService';
+import { StartupProgressOverlay } from './src/components/common/StartupProgressOverlay';
 
 const appStartTime = Date.now();
 
@@ -126,15 +129,24 @@ const App = () => {
   const SESSION_REFRESH_WINDOW_MS = 5 * 60 * 1000;
 
   useEffect(() => {
-  // Lazy load Sentry after core initialization
-  InteractionManager.runAfterInteractions(() => {
-    initializeLogging().catch(err => {
-      console.error('[App] Failed to initialize logging:', err);
+    // Initialize battery monitoring
+    batteryService.initialize().catch(err => {
+      console.error('[App] Failed to initialize battery service:', err);
     });
-    // Lazy connect socket.io after core initialization
-    socketService.connect();
-  });
-}, []);
+
+    // Lazy load Sentry after core initialization
+    InteractionManager.runAfterInteractions(() => {
+      initializeLogging().catch(err => {
+        console.error('[App] Failed to initialize logging:', err);
+      });
+      // Lazy connect socket.io after core initialization
+      socketService.connect();
+    });
+
+    return () => {
+      batteryService.shutdown();
+    };
+  }, []);
 
   useEffect(() => {
     const checkSessionOnForeground = async () => {

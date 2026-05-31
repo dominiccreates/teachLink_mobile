@@ -393,3 +393,19 @@ Protocol shape:
 - unknown events fallback:
   - `field 3` (string): event name
   - `field 4` (string): JSON payload
+
+## Battery-Aware Performance Throttling
+
+The application monitors the device battery level and automatically throttles performance-intensive features when the battery falls below **20%** to extend battery life.
+
+#### Throttling Behaviors (<20% Battery)
+
+1.  **Reduced Animation Frame Rate**: Core animations are capped at **30 FPS** (down from 60 FPS), and animation durations are doubled via the `useAdaptiveFrameRate` hook to maintain visual consistency.
+2.  **Disabled Image Prefetching**: Automatic image preloading is disabled in the `usePrefetchImages` hook to reduce background radio and CPU activity.
+3.  **Reduced Sync Frequency**: The background synchronization interval is increased from **30 seconds** to **2 minutes** in the `SyncService`.
+
+#### Implementation Details
+
+- **Device Store**: Battery state is managed globally in `src/store/deviceStore.ts`.
+- **Battery Service**: Real-time monitoring is handled by `src/services/batteryService.ts` using the `expo-battery` library.
+- **Auto-Adjustment**: The system automatically resumes normal performance once the device is charged above 20%.
