@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/rinafcode/teachLink_mobile/compare/v1.14.0...v1.14.1) (2026-06-01)
+
+
+### Bug Fixes
+
+* prevent generic prop spreading in mobile drawer and offline indicator ([e60dea5](https://github.com/rinafcode/teachLink_mobile/commit/e60dea54b982b12f1b3661b6a1d5b930f2566d65))
+
 # [1.14.0](https://github.com/rinafcode/teachLink_mobile/compare/v1.13.0...v1.14.0) (2026-06-01)
 
 
