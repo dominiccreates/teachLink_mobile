@@ -175,6 +175,9 @@ export let isSecureStorageVerified = false;
  */
 export async function initializeSecureStorage(): Promise<boolean> {
   try {
+    if (process.env.NODE_ENV === 'test') {
+      isSecureStorageVerified = false;
+    }
     await verifySecureStorageAvailable();
     isSecureStorageVerified = true;
     logger.info('✅ SecureStorage initialized successfully');
@@ -380,3 +383,8 @@ export async function isSessionValid(): Promise<boolean> {
 
 export const STORAGE_KEYS = KEYS;
 export const STORAGE_SENSITIVE_KEYS = SENSITIVE_KEYS;
+
+// ─── Test Helpers ─────────────────────────────────────────────────────────────
+export function __resetSecureStorageVerification__(): void {
+  isSecureStorageVerified = false;
+}

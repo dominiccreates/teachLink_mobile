@@ -1,6 +1,7 @@
 import React from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNetworkStatus } from '../../hooks';
+import { useAdaptiveFrameRate } from '../../hooks/useAdaptiveFrameRate';
 import logger from '../../utils/logger';
 import { OfflineIndicator } from './OfflineIndicator';
 
@@ -30,10 +31,13 @@ export const OfflineIndicatorProvider = (props: any) => {
 
     setToasts((prev: any) => [...prev, toast]);
 
-    // Auto-remove toast after duration
-    setTimeout(() => {
+    // Auto-remove toast after duration using requestAnimationFrame for frame-synced timing
+    const cancelSchedule = scheduleAnimationFrame(() => {
       removeToast(id);
     }, toastDuration);
+
+    // Store cancel function for cleanup if needed
+    (toast as any).cancelSchedule = cancelSchedule;
 
     return id;
   };
@@ -92,15 +96,15 @@ export const OfflineIndicatorProvider = (props: any) => {
 const ToastComponent = (props: any) => {
   const { toast, onDismiss } = props;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const { durationMultiplier } = useAdaptiveFrameRate();
 
   React.useEffect(() => {
-    // Fade in animation
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 300,
+      duration: 300 * durationMultiplier,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, durationMultiplier]);
 
   const getToastStyle = () => {
     switch (toast.type) {

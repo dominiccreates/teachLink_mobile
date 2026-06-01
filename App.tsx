@@ -2,9 +2,8 @@ import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useRef } from 'react';
-import { Alert, AppState, AppStateStatus, LogBox } from 'react-native';
+import { Alert, AppState, AppStateStatus, InteractionManager, LogBox } from 'react-native';
 
-import StorybookUI from './.rnstorybook';
 import './global.css';
 import { ErrorBoundary } from './src/components/common/ErrorBoundary';
 import { requireEnvVariables } from './src/config/env';
@@ -27,20 +26,22 @@ import { syncService } from './src/services/syncService';
 import { useAppStore } from './src/store';
 import { appLogger } from './src/utils/logger';
 import { handleNotificationReceived } from './src/utils/notificationHandlers';
+import { prefetchExternalResources } from './src/utils/resourceHints';
+import { mobileAnalyticsService } from './src/services/mobileAnalytics';
+import { sentryContextService } from './src/services/sentryContext';
+import { flushLogQueue } from './src/config/logging';
+import { AnalyticsEvent, PerformanceMetric } from './src/utils/trackingEvents';
+import { batteryService } from './src/services/batteryService';
+import { startupProgressService } from './src/services/startupProgressService';
+import { StartupProgressOverlay } from './src/components/common/StartupProgressOverlay';
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
-
-// SHOW_STORYBOOK flag based on environment variable
-const SHOW_STORYBOOK = process.env.EXPO_PUBLIC_STORYBOOK === 'true';
+const appStartTime = Date.now();
 
 // Centralized structured logging initialized on startup
 requireEnvVariables();
 
-// Initialize centralized logging on app start
-initializeLogging().catch(err => {
-  console.error('[App] Failed to initialize logging:', err);
-});
+// Preconnect to API hosts and external resources
+prefetchExternalResources();
 
 if (__DEV__) {
   appLogger.infoSync('Development mode: centralized logger active');
@@ -80,22 +81,63 @@ const App = () => {
   useEffect(() => {
     async function prepareApp() {
       try {
-        // 1. Load fonts
-        await Font.loadAsync({
-          // You can add custom fonts here later if needed
-        });
+        // Initialize progress tracking
+        startupProgressService.setInitializing(true);
+        startupProgressService.registerStep('fonts', 'Loading Fonts', 500);
+        startupProgressService.registerStep('cache', 'Clearing Cache', 800);
+        startupProgressService.registerStep('auth', 'Checking Authentication', 1000);
+        startupProgressService.registerStep('data', 'Loading Initial Data', 1500);
 
-        // 2. Check Auth State / wait for store hydration
+        // 1. Load fonts
+        startupProgressService.startStep('fonts');
+        await FontLoadAsync({
+          'Inter-Regular': require('./assets/fonts/Inter-Regular.ttf'),
+          'Inter-Bold': require('./assets/fonts/Inter-Bold.ttf'),
+        });
+        startupProgressService.completeStep('fonts');
+
+        // 2. Version-based cache invalidation: clear stale caches on app/data version bump
+        startupProgressService.startStep('cache');
+        const appVersion = require('./package.json').version as string;
+        await handleCacheVersionUpdate(appVersion);
+        startupProgressService.completeStep('cache');
+
+        // 3. Check Auth State / wait for store hydration
+        startupProgressService.startStep('auth');
         // Zustand persist automatically hydrates, we can assume it's done or add a small delay
         // to ensure initial data fetching completes.
+        await new Promise(resolve => setTimeout(resolve, 300));
+        startupProgressService.completeStep('auth');
 
-        // 3. Initial data fetch (simulate or add real fetch)
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // 3. Warm critical caches (user profile + home feed) in parallel
+        await warmCriticalCaches();
       } catch (e) {
         console.warn('Error during app initialization:', e);
+        // Mark the last step as failed
+        const inProgressStep = startupProgressService.getInProgressStep();
+        if (inProgressStep) {
+          startupProgressService.failStep(
+            inProgressStep.id,
+            e instanceof Error ? e.message : String(e)
+          );
+        }
       } finally {
         setAppIsReady(true);
+        startupProgressService.setInitializing(false);
         await SplashScreen.hideAsync();
+
+        // Track cold start metric
+        const coldStartDuration = Date.now() - appStartTime;
+        mobileAnalyticsService.trackEvent(AnalyticsEvent.PERFORMANCE_METRIC, {
+          metric_name: PerformanceMetric.APP_LOAD_TIME,
+          metric_value: coldStartDuration,
+          launch_type: 'cold',
+        });
+        appLogger.infoSync(`[App] Cold start completed in ${coldStartDuration}ms`);
+
+        // Record app launch breadcrumb so every Sentry event has launch context
+        sentryContextService.trackAppLifecycle('launch');
+        sentryContextService.trackAction('app_cold_start', { durationMs: coldStartDuration });
       }
     }
 
@@ -141,34 +183,17 @@ const App = () => {
       }
     });
 
-    // Start request queue monitoring
-    requestQueue.startMonitoring(apiClient);
-
-    // Initialize and start sync service for background sync
-    syncService.startAutoSync();
-
-    // Set up notification navigation handler
-    const notificationCleanup = setupNotificationNavigation();
-
-    // Listen for notifications received while app is foregrounded
-    const subscription = addNotificationReceivedListener(handleNotificationReceived);
-
-    // Check if app was launched from a notification
-    getLastNotificationResponse().then(response => {
-      if (response) {
-        appLogger.infoSync('App launched from notification', { response });
-      }
+    // Lazy load Sentry after core initialization
+    InteractionManager.runAfterInteractions(() => {
+      initializeLogging().catch(err => {
+        console.error('[App] Failed to initialize logging:', err);
+      });
+      // Lazy connect socket.io after core initialization
+      socketService.connect();
     });
 
-    // Cleanup on unmount
     return () => {
-      socketService.disconnect();
-      syncService.stopAutoSync();
-      notificationCleanup();
-      removeNotificationListener(subscription);
-      // Clean up the unhandled rejection handler
-      // @ts-ignore
-      global.onunhandledrejection = undefined;
+      batteryService.shutdown();
     };
   }, []);
 
@@ -225,9 +250,17 @@ const App = () => {
     const appStateSubscription = AppState.addEventListener('change', nextAppState => {
       const wasInBackground = appStateRef.current.match(/inactive|background/);
       const isForegrounded = nextAppState === 'active';
+      const isBackgrounded = appStateRef.current === 'active' && nextAppState.match(/inactive|background/);
 
       if (wasInBackground && isForegrounded) {
+        sentryContextService.trackAppLifecycle('foreground');
         void checkSessionOnForeground();
+      }
+
+      if (isBackgrounded) {
+        sentryContextService.trackAppLifecycle('background');
+        // Flush queued logs before going to background so nothing is lost
+        void flushLogQueue();
       }
 
       appStateRef.current = nextAppState;
@@ -244,6 +277,7 @@ const App = () => {
 
   return (
     <ErrorBoundary>
+      <StartupProgressOverlay />
       <AuthProvider>
         <FeatureFlagInitializer />
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
@@ -253,4 +287,9 @@ const App = () => {
   );
 };
 
-export default SHOW_STORYBOOK ? StorybookUI : App;
+const AppEntry = __DEV__ && process.env.EXPO_PUBLIC_STORYBOOK === 'true'
+  ? // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('./.rnstorybook').default
+  : App;
+
+export default AppEntry;

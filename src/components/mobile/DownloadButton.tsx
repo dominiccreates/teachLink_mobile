@@ -62,7 +62,7 @@ export function DownloadButton({ id, title, url, size, className }: DownloadButt
 
   const task = useMemo(() => tasks.find(t => t.id === id), [tasks, id]);
 
-  const handlePress = async () => {
+  const handlePress = useCallback(async () => {
     if (!task) {
       try {
         await startDownload(id, title, url, size);
@@ -72,7 +72,7 @@ export function DownloadButton({ id, title, url, size, className }: DownloadButt
     } else if (task.status === 'completed') {
       removeDownload(id);
     }
-  };
+  }, [task, id, title, url, size, startDownload, removeDownload]);
 
   const getLabel = () => {
     if (!task) return 'Download';
@@ -80,7 +80,7 @@ export function DownloadButton({ id, title, url, size, className }: DownloadButt
     if (task.status === 'queued') return 'Queued';
     if (task.status === 'completed') return 'Offline';
     return 'Retry';
-  };
+  }, [task]);
 
   return (
     <TouchableOpacity
