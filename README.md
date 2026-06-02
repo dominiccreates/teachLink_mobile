@@ -1,5 +1,5 @@
 # TeachLink Mobile
-///WIP
+
 A cross-platform mobile app built with [Expo](https://expo.dev) and React Native for sharing knowledge, live chat, push notifications, and creator monetisation.
 
 ## Prerequisites
