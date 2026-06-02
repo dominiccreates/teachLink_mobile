@@ -49,76 +49,6 @@ npm run test:coverage          # Run with coverage report
 npx jest src/__tests__/path/to/file.test.ts
 ```
 
-## Performance Audit
-
-TeachLink includes a comprehensive performance audit system for analyzing and optimizing all aspects of the application.
-
-### Quick Start
-
-```bash
-# Run performance audit
-npm run audit:performance
-
-# Generate detailed HTML report
-npm run audit:performance:html
-
-# Generate all report formats (JSON, HTML, Markdown)
-npm run audit:performance:all
-
-# Compare with baseline
-npm run audit:performance:compare
-
-# Save current performance as baseline
-npm run audit:save-baseline
-
-# Watch mode (re-run on changes)
-npm run audit:performance:watch
-```
-
-### What Gets Analyzed
-
-The audit system analyzes 7 key performance dimensions:
-
-1. **Bundle Size** — Total size, chunks, duplicates, large files
-2. **Memory** — Heap usage, leaks, large objects
-3. **Render Performance** — Slow components, re-renders, animations
-4. **Network** — API endpoints, request deduplication, assets
-5. **Dependencies** — Vulnerabilities, outdated packages, licensing
-6. **Runtime** — Startup time, first paint, CPU usage
-7. **Assets** — Images, fonts, optimization opportunities
-
-### Reports
-
-Audit reports are generated in multiple formats:
-
-- **JSON** — Structured data for programmatic processing
-- **HTML** — Beautiful interactive reports
-- **Markdown** — GitHub-friendly documentation
-
-### Quarterly Planning
-
-The audit system supports quarterly performance reviews and roadmap planning:
-
-```bash
-# Run full audit at quarter start
-npm run audit:performance:all
-
-# Save as baseline
-npm run audit:save-baseline
-
-# Each month, compare with baseline
-npm run audit:performance:compare
-```
-
-For quarterly planning guide, see [PERFORMANCE_AUDIT_QUARTERLY.md](./PERFORMANCE_AUDIT_QUARTERLY.md)
-
-### Documentation
-
-- Full documentation: [src/audit/README.md](./src/audit/README.md)
-- Quarterly process guide: [PERFORMANCE_AUDIT_QUARTERLY.md](./PERFORMANCE_AUDIT_QUARTERLY.md)
-- Detailed analyzer docs in `src/audit/analyzers/`
-- Batch import/export processing: [docs/batch-processing.md](./docs/batch-processing.md)
-
 ## Logging
 
 TeachLink uses a centralized, production-grade logging system with structured JSON output, context propagation, and remote integration.
@@ -212,31 +142,6 @@ appLogger.infoSync('Quick log');
 appLogger.errorSync('Error', error);
 ```
 
-### Cursor-based API pagination
-The app now supports cursor-based list pagination for backend endpoints such as `/courses`.
-
-- `limit` — number of records per page
-- `cursor` — opaque token returned by the previous page
-- `orderBy` — stable sort field (`id`)
-- `direction` — `asc` or `desc`
-
-Response shape:
-
-```json
-{
-  "items": [/* Course[] */],
-  "nextCursor": "string | null",
-  "hasMore": true
-}
-```
-
-Cursor format:
-
-- URI-safe encoded JSON
-- contains `{ lastId, orderBy, direction }`
-
-Use `courseApi.getCoursesPage({ limit, cursor, orderBy, direction })` to fetch each page.
-
 ### Retrieve Logs (Development)
 
 ```typescript
@@ -244,7 +149,7 @@ import { retrieveLogFiles, clearLogFiles } from '@/config/logging';
 
 // Get all stored logs
 const logs = await retrieveLogFiles();
-logs.forEach(log => console.log(log));
+logs.forEach((log) => console.log(log));
 
 // Clear log storage
 await clearLogFiles();
@@ -259,6 +164,7 @@ Copy `.env.example` to `.env` and set the following:
 | `EXPO_PUBLIC_APP_ENV`                   | No       | Runtime environment (`development` / `production`) |
 | `EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS` | No       | Enable push notifications (`true` / `false`)       |
 | `EXPO_PUBLIC_STORYBOOK`                 | No       | Enable Storybook mode (`true` / `false`)           |
+
 
 The app validates `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_SOCKET_URL` at startup and will refuse to launch with invalid or missing values.
 
@@ -313,18 +219,6 @@ Run `eas credentials` to set up or repair iOS/Android signing credentials.
 - Dark/light mode
 - **Isolated Component Development** via Storybook
 
-## Adaptive Notification Throttling
-
-Notification delivery now adapts to recent engagement to reduce fatigue and battery usage:
-
-- **Active users** (engaged within 24 hours): ~5 minute minimum gap per notification type.
-- **Recently inactive users** (24-72 hours): ~30 minute minimum gap per notification type.
-- **Inactive users** (72+ hours or no engagement history): ~180 minute minimum gap per notification type.
-
-Engagement is currently recorded when users open notifications. Throttling is enforced per notification type before storing foreground notifications.
-
-For details on the notification deduplication and batching strategy, see `docs/NOTIFICATION_STRATEGY.md`.
-
 ## Resources
 
 - [Figma Design](https://www.figma.com/design/0RX6a19AbtemWmq8GLX1Y4/TeachLink-Project?node-id=0-1&t=gfrhW9c55Pxnfrl1-0)
@@ -335,17 +229,18 @@ For details on the notification deduplication and batching strategy, see `docs/N
 
 The project defines three EAS build profiles in `eas.json`:
 
-| Profile         | Description                                                                                                              | Usage                             |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------- |
-| **development** | Fast internal build for debugging, includes development client and runs on the `development` channel.                    | `eas build --profile development` |
-| **preview**     | Internal preview build, generates an APK for Android, runs on the `preview` channel.                                     | `eas build --profile preview`     |
-| **production**  | Production‑ready build with auto‑incremented version numbers for iOS and Android, publishes to the `production` channel. | `eas build --profile production`  |
+| Profile | Description | Usage |
+|---|---|---|
+| **development** | Fast internal build for debugging, includes development client and runs on the `development` channel. | `eas build --profile development` |
+| **preview** | Internal preview build, generates an APK for Android, runs on the `preview` channel. | `eas build --profile preview` |
+| **production** | Production‑ready build with auto‑incremented version numbers for iOS and Android, publishes to the `production` channel. | `eas build --profile production` |
 
 These profiles can also be used when submitting:
 
 - `eas submit --profile production` will use the production credentials defined in the `submit.production` section of `eas.json`.
 
 Refer to the official EAS docs for more details.
+
 
 ---
 
@@ -391,46 +286,3 @@ EXPO_PUBLIC_ENABLE_PUSH_NOTIFICATIONS=true
 > ⚠️ Never commit your `.env` file. It is listed in `.gitignore`.
 
 See [DEPLOY.md](./DEPLOY.md) for platform-specific setup (Google Play & App Store), build profiles, troubleshooting, and security notes.
-
-## Analytics event throttling
-
-High-frequency analytics events (for example, carousel scroll telemetry) are tagged with:
-
-- `event_category: 'high_frequency'`
-- `event_name: '<stable_event_key>'`
-
-The mobile analytics service throttles those tagged events to **10 events/second per `event_name`**.
-This keeps behavioral trends useful while reducing analytics event volume and downstream ingestion cost.
-
-## WebSocket Binary Protocol
-
-Real-time socket payloads now use a protobuf-style binary envelope for `notification_created`, `course_updated`, and `message_received` events.
-
-- Outbound messages are serialized through `encodeBinaryMessage` in `src/services/socket/binaryProtocol.ts`.
-- Inbound binary messages are deserialized through `decodeBinaryMessage` with JSON fallback for unknown event types.
-- Payload reduction can be measured with `estimatePayloadReduction(event, payload)` for regression and bandwidth reporting.
-
-Protocol shape:
-
-- `field 1` (varint): protocol version
-- `field 2` (varint): event type id for known events
-- known event payload fields start at `field 10`
-- unknown events fallback:
-  - `field 3` (string): event name
-  - `field 4` (string): JSON payload
-
-## Battery-Aware Performance Throttling
-
-The application monitors the device battery level and automatically throttles performance-intensive features when the battery falls below **20%** to extend battery life.
-
-#### Throttling Behaviors (<20% Battery)
-
-1.  **Reduced Animation Frame Rate**: Core animations are capped at **30 FPS** (down from 60 FPS), and animation durations are doubled via the `useAdaptiveFrameRate` hook to maintain visual consistency.
-2.  **Disabled Image Prefetching**: Automatic image preloading is disabled in the `usePrefetchImages` hook to reduce background radio and CPU activity.
-3.  **Reduced Sync Frequency**: The background synchronization interval is increased from **30 seconds** to **2 minutes** in the `SyncService`.
-
-#### Implementation Details
-
-- **Device Store**: Battery state is managed globally in `src/store/deviceStore.ts`.
-- **Battery Service**: Real-time monitoring is handled by `src/services/batteryService.ts` using the `expo-battery` library.
-- **Auto-Adjustment**: The system automatically resumes normal performance once the device is charged above 20%.
