@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import * as Device from 'expo-device';
+import { isDevice } from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { useDegradationStore } from '../store/degradationStore';
@@ -23,11 +23,11 @@ Notifications.setNotificationHandler({
  * Includes graceful degradation: if push notifications unavailable, falls back to in-app notifications
  */
 export async function registerForPushNotifications(): Promise<string | null> {
-  // Check device type
-  if (!Device.isDevice) {
+  // Check device type using the proper 'isDevice' check from expo-device
+  if (!isDevice) {
     logger.warn('Push notifications require a physical device (simulator detected)');
     featureCapabilities.getFeatureInfo(FeatureType.PUSH_NOTIFICATIONS);
-    const degradationStore = useDegradationStore();
+    const degradationStore = useDegradationStore.getState(); // Fixed: Accessing Zustand store state cleanly outside a component
     degradationStore.setFeatureStatus(FeatureType.PUSH_NOTIFICATIONS, FeatureStatus.HARDWARE_UNAVAILABLE);
     degradationStore.addNotification({
       feature: FeatureType.PUSH_NOTIFICATIONS,
@@ -50,7 +50,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     if (finalStatus !== 'granted') {
       logger.warn('Push notification permission not granted');
-      const degradationStore = useDegradationStore();
+      const degradationStore = useDegradationStore.getState();
       degradationStore.setFeatureStatus(FeatureType.PUSH_NOTIFICATIONS, FeatureStatus.PERMISSION_DENIED);
       degradationStore.addNotification({
         feature: FeatureType.PUSH_NOTIFICATIONS,
@@ -78,13 +78,13 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     // Update feature capability on success
     featureCapabilities.getFeatureInfo(FeatureType.PUSH_NOTIFICATIONS);
-    const degradationStore = useDegradationStore();
+    const degradationStore = useDegradationStore.getState();
     degradationStore.setFeatureStatus(FeatureType.PUSH_NOTIFICATIONS, FeatureStatus.AVAILABLE);
 
     return token.data;
   } catch (error) {
     logger.error('Error registering for push notifications:', error);
-    const degradationStore = useDegradationStore();
+    const degradationStore = useDegradationStore.getState();
     degradationStore.setFeatureStatus(FeatureType.PUSH_NOTIFICATIONS, FeatureStatus.UNAVAILABLE);
     degradationStore.addNotification({
       feature: FeatureType.PUSH_NOTIFICATIONS,
@@ -203,7 +203,6 @@ export async function registerTokenWithBackend(token: string): Promise<boolean> 
     // const response = await apiClient.post('/api/notifications/register', {
     //   token,
     //   platform: Platform.OS,
-    //   deviceId: Device.deviceName,
     // });
     // return response.data.success;
 
@@ -315,7 +314,7 @@ export function addNotificationResponseListener(
  * Remove a notification listener
  */
 export function removeNotificationListener(subscription: Notifications.Subscription): void {
-  subscription.remove(); // Use the subscription's remove method instead
+  subscription.remove(); 
 }
 
 /**

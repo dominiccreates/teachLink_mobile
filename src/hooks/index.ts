@@ -1,15 +1,18 @@
-export * from './useFormCache';
 export * from './useAdaptiveFrameRate';
 export * from './useAdaptiveTheme';
 export * from './useAnalytics';
 export { AuthProvider, useAuth } from './useAuth';
 export * from './useBiometricAuth';
 export * from './useCamera';
+export * from './useCoursePagination';
 export * from './useCourseProgress';
+export * from './useDebounce';
 export * from './useDynamicFontSize';
+export * from './useFeatureFlags';
 export * from './useGestures';
 export * from './useHapticFeedback';
 export * from './useInAppPurchase';
+export { useInAppReview, useReviewMetrics } from './useInAppReview';
 export * from './useLongPress';
 export * from './useMemoryMonitor';
 export * from './useNetworkStatus';
@@ -21,15 +24,20 @@ export * from './usePinchZoom';
 export * from './usePrefetchImages';
 export * from './useSafeArea';
 export * from './useScreenReader';
+export * from './useStreamingData';
 export * from './useSwipe';
 export * from './useVideoGestures';
 export * from './useVoiceRecognition';
+export * from './useFocusRestore';
+export * from './useFocusTrap';
 
 // Optimized gesture handlers (named exports avoid duplicate SwipeDirection/SwipeInfo types)
-export { useOptimizedLongPress, OptimizedLongPressView } from './useOptimizedLongPress';
-export { useOptimizedPinchZoom, OptimizedPinchZoomView } from './useOptimizedPinchZoom';
-export { useOptimizedSwipe, OptimizedSwipeView } from './useOptimizedSwipe';
-export { useOptimizedVideoGestures, OptimizedVideoGesturesView } from './useOptimizedVideoGestures';
+export { OptimizedLongPressView, useOptimizedLongPress } from './useOptimizedLongPress';
+export { OptimizedPinchZoomView, useOptimizedPinchZoom } from './useOptimizedPinchZoom';
+export { OptimizedSwipeView, useOptimizedSwipe } from './useOptimizedSwipe';
+export { OptimizedVideoGesturesView, useOptimizedVideoGestures } from './useOptimizedVideoGestures';
 
-export * from './useDebounce';
+export * from './useHealthDashboard';
 export * from './usePredictivePreload';
+export * from './useOptimizedClipboard';
+export * from './useReactProfiler';

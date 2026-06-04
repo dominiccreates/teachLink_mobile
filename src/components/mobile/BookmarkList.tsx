@@ -26,7 +26,7 @@ export const BookmarkList = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.list}>
+    <ScrollView contentContainerStyle={styles.list} removeClippedSubviews={true}>
       {bookmarks.map(item => (
         <SwipeableRow
           key={item.itemId}

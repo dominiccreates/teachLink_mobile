@@ -1,42 +1,36 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { AlertCircle, BookOpen, Lock, Mail, User } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { MobileFormInput } from '../../components/mobile/MobileFormInput';
 import { useDynamicFontSize } from '../../hooks/useDynamicFontSize';
 import { useFormCache } from '../../hooks/useFormCache';
+import { useFormValidation } from '../../hooks/useFormValidation';
 import { cacheFormValues } from '../../services/formCache';
 import {
-  getPasswordStrength,
-  validateConfirmPassword,
-  validateEmail,
-  validateName,
-  validatePassword,
+    getPasswordStrength,
+    validateConfirmPassword,
+    validateEmail,
+    validateName,
+    validatePassword,
 } from '../../utils/validation';
 
 interface MobileRegisterProps {
   onRegisterSuccess?: () => void;
   onLogin?: () => void;
   isDark?: boolean;
-}
-
-interface FieldErrors {
-  name?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
 }
 
 export const MobileRegister: React.FC<MobileRegisterProps> = ({
@@ -48,20 +42,25 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errors, setErrors] = useState<FieldErrors>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const nameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
 
-  const { scale } = useDynamicFontSize();
   const {
-    applyPrefillToFields,
-    isLoading: formCacheLoading,
-    prefillValues,
-  } = useFormCache(['fullName', 'email']);
+    errors,
+    onChangeText: onFieldChange,
+    onBlur: onFieldBlur,
+    validateAll,
+  } = useFormValidation({
+    name: { validator: validateName },
+    email: { validator: validateEmail },
+    password: { validator: validatePassword },
+    confirmPassword: { validator: v => validateConfirmPassword(password, v) },
+  });
+
+  const { scale } = useDynamicFontSize();
   const styles = createStyles(scale);
   const bg = isDark ? '#0f172a' : '#f8fafc';
   const cardBg = isDark ? '#1e293b' : '#fff';
@@ -78,44 +77,23 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
     applyPrefillToFields({ fullName: name, email }, { fullName: setName, email: setEmail });
   }, [applyPrefillToFields, email, formCacheLoading, name, prefillValues]);
 
-  function clearFieldError(field: keyof FieldErrors) {
-    setErrors(prev => ({ ...prev, [field]: undefined }));
-  }
-
-  function validate(): boolean {
-    const nameCheck = validateName(name);
-    const emailCheck = validateEmail(email);
-    const passwordCheck = validatePassword(password);
-    const confirmCheck = validateConfirmPassword(password, confirmPassword);
-
-    const next: FieldErrors = {};
-    if (!nameCheck.valid) next.name = nameCheck.message;
-    if (!emailCheck.valid) next.email = emailCheck.message;
-    if (!passwordCheck.valid) next.password = passwordCheck.message;
-    if (!confirmCheck.valid) next.confirmPassword = confirmCheck.message;
-
-    setErrors(next);
-    return Object.keys(next).length === 0;
-  }
-
   const handleRegister = async () => {
-    if (!validate()) return;
+    if (!validateAll({ name, email, password, confirmPassword })) return;
     setIsLoading(true);
     try {
-      // Registration API call would go here
       await new Promise(resolve => setTimeout(resolve, 1000));
-      await cacheFormValues({ fullName: name.trim(), email: email.trim().toLowerCase() });
+      await cacheFormValues({ fullName: data.name.trim(), email: data.email.trim().toLowerCase() });
       onRegisterSuccess?.();
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fieldBorder = (field: keyof FieldErrors) => (errors[field] ? '#ef4444' : borderColor);
+  const fieldBorder = (field: keyof typeof errors) => (errors[field] ? '#ef4444' : borderColor);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: bg }]}>
-      <KeyboardAvoidingView
+      <DelegatedKeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.kav}
       >
@@ -123,6 +101,7 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
         >
           <View style={styles.header}>
             <LinearGradient
@@ -148,8 +127,9 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
               value={name}
               onChangeText={v => {
                 setName(v);
-                clearFieldError('name');
+                onFieldChange('name', v);
               }}
+              onBlur={() => onFieldBlur('name', name)}
               placeholder="Your full name"
               required
               error={errors.name}
@@ -167,8 +147,9 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
               value={email}
               onChangeText={v => {
                 setEmail(v);
-                clearFieldError('email');
+                onFieldChange('email', v);
               }}
+              onBlur={() => onFieldBlur('email', email)}
               placeholder="you@example.com"
               required
               error={errors.email}
@@ -199,8 +180,9 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
                   value={password}
                   onChangeText={v => {
                     setPassword(v);
-                    clearFieldError('password');
+                    onFieldChange('password', v);
                   }}
+                  onBlur={() => onFieldBlur('password', password)}
                   placeholder="Min 8 chars, 1 uppercase, 1 number"
                   placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
                   secureTextEntry
@@ -213,7 +195,7 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
               {password.length > 0 && !errors.password && (
                 <PasswordStrengthBar strength={passwordStrength} scale={scale} />
               )}
-            </View>
+            />
 
             {/* Confirm Password */}
             <View style={styles.fieldWrap}>
@@ -234,8 +216,9 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
                   value={confirmPassword}
                   onChangeText={v => {
                     setConfirmPassword(v);
-                    clearFieldError('confirmPassword');
+                    onFieldChange('confirmPassword', v);
                   }}
+                  onBlur={() => onFieldBlur('confirmPassword', confirmPassword)}
                   placeholder="Repeat your password"
                   placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
                   secureTextEntry
@@ -247,11 +230,11 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
               {errors.confirmPassword && (
                 <FieldError message={errors.confirmPassword} scale={scale} />
               )}
-            </View>
+            />
 
             <TouchableOpacity
               style={[styles.registerBtn, { opacity: isLoading ? 0.7 : 1 }]}
-              onPress={handleRegister}
+              onPress={handleSubmit(onSubmit)}
               disabled={isLoading}
               activeOpacity={0.85}
             >
@@ -286,7 +269,7 @@ export const MobileRegister: React.FC<MobileRegisterProps> = ({
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </DelegatedKeyboardAvoidingView>
     </SafeAreaView>
   );
 };

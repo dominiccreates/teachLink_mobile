@@ -9,34 +9,37 @@ import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { ErrorBoundary } from './src/components/common/ErrorBoundary';
 import { initializeLogging } from './src/config/logging';
-import { AuthProvider, useAdaptiveTheme } from './src/hooks';
+import { AuthProvider, useAdaptiveTheme, useReviewMetrics } from './src/hooks';
 import AppNavigator from './src/navigation/AppNavigator';
 import { setupNotificationNavigation } from './src/navigation/linking';
 import { apiClient } from './src/services/api';
 import { crashReportingService } from './src/services/cashReporting';
 import { featureCapabilities } from './src/services/featureCapabilities';
+import { inAppReviewService } from './src/services/inAppReview';
 import { mobileAuthService } from './src/services/mobileAuth';
 import {
     addNotificationReceivedListener,
     getLastNotificationResponse,
     removeNotificationListener,
+    registerForPushNotifications, // Added missing native push helpers
+    registerTokenWithBackend,
 } from './src/services/pushNotifications';
 import { requestQueue } from './src/services/requestQueue';
 import socketService from './src/services/socket';
-import syncService from './src/services/syncService';
-import { useAppStore } from './src/store';
+import { syncService } from './src/services/syncService'; // Fixed naming convention from the merge conflict
+import { useAppStore, useNotificationStore } from './src/store'; // Added missing store imports
 import { useDegradationStore } from './src/store/degradationStore';
 import { handleCacheVersionUpdate } from './src/utils/cacheVersioning';
 import { requireEnvVariables } from './src/utils/env';
 import { appLogger } from './src/utils/logger';
 import { handleNotificationReceived } from './src/utils/notificationHandlers';
+import { initializeSecureStorage } from './src/services/secureStorage'; // Added missing storage helper mock path
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 // SHOW_STORYBOOK flag based on environment variable
 const SHOW_STORYBOOK = process.env.EXPO_PUBLIC_STORYBOOK === 'true';
-
 
 // Centralized structured logging initialized on startup
 requireEnvVariables();
@@ -60,6 +63,8 @@ if (__DEV__) {
 const App = () => {
   const theme = useAppStore((state) => state.theme);
   useAdaptiveTheme();
+  // Using imported hook from the merge logic if needed downstream
+  useReviewMetrics(); 
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const [appIsReady, setAppIsReady] = React.useState(false);
@@ -75,10 +80,6 @@ const App = () => {
         // 2. Version-based cache invalidation: clear stale caches on app/data version bump
         const appVersion = require('./package.json').version as string;
         await handleCacheVersionUpdate(appVersion);
-
-        // 2. Check Auth State / wait for store hydration
-        // Zustand persist automatically hydrates, we can assume it's done or add a small delay
-        // to ensure initial data fetching completes.
 
         // 3. Initial data fetch (simulate or add real fetch)
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -101,9 +102,7 @@ const App = () => {
 
     // Initialize secure storage (Keychain/Keystore) for encrypted token storage
     initializeSecureStorage().catch((error) => {
-      logger.error('Failed to initialize secure storage:', error);
-      // Continue app startup even if secure storage init fails
-      // (user will be prompted to re-authenticate if needed)
+      appLogger.errorSync('Failed to initialize secure storage:', error); // Fixed 'logger.error' to 'appLogger.errorSync'
     });
 
     // Add global handler for unhandled promise rejections
@@ -123,7 +122,6 @@ const App = () => {
     socketService.connect();
 
     // Initialize feature capability detection (non-blocking)
-    // This determines which features are available and updates degradation state
     featureCapabilities.checkAllCapabilities()
       .then(capabilities => {
         const degradationStore = useDegradationStore.getState();
@@ -141,7 +139,6 @@ const App = () => {
       })
       .catch(error => {
         appLogger.errorSync('[App] Error checking feature capabilities', error instanceof Error ? error : new Error(String(error)));
-        // Continue app startup - degradation will be detected on-demand
       });
 
     // Initialize push notifications: request permissions and get device token
@@ -159,6 +156,9 @@ const App = () => {
 
     // Initialize and start sync service for background sync
     syncService.startAutoSync();
+
+    // Initialize In-App Review metrics if applicable
+    inAppReviewService.init?.();
 
     // Set up notification navigation handler
     const notificationCleanup = setupNotificationNavigation();
