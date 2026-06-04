@@ -16,7 +16,7 @@ interface MobileQuestionCardProps {
   onAnswerSelect: (questionId: string, answer: string | number, isMultiSelect?: boolean) => void;
 }
 
-export default function MobileQuestionCard({
+const MobileQuestionCard = React.memo(function MobileQuestionCard({
   question,
   questionNumber,
   totalQuestions,
@@ -37,11 +37,13 @@ export default function MobileQuestionCard({
   }, [selectedAnswer]);
 
   const handleOptionSelect = (optionIndex: number) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useHapticFeedback('light');
     onAnswerSelect(question.id, optionIndex, question.multiple);
   };
 
   const handleTrueFalse = (value: number) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useHapticFeedback('light');
     onAnswerSelect(question.id, value, false);
   };
@@ -68,6 +70,7 @@ export default function MobileQuestionCard({
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      removeClippedSubviews={true}
     >
       {/* Question Header */}
       <View style={styles.header}>
@@ -95,7 +98,7 @@ export default function MobileQuestionCard({
               const isSelected = isOptionSelected(index);
               return (
                 <TouchableOpacity
-                  key={index}
+                  key={`option-${question.id}-${index}`}
                   onPress={() => handleOptionSelect(index)}
                   style={[styles.optionButton, isSelected && styles.optionButtonSelected]}
                 >
@@ -181,7 +184,9 @@ export default function MobileQuestionCard({
       </View>
     </ScrollView>
   );
-}
+});
+
+export default MobileQuestionCard;
 
 const styles = StyleSheet.create({
   container: {

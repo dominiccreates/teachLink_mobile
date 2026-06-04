@@ -24,6 +24,7 @@ export default function QuizResults({ quiz, score, passed, onBack, onRetake }: Q
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      removeClippedSubviews={true}
     >
       {/* Result Icon */}
       <View style={styles.iconContainer}>

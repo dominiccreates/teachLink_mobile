@@ -1,3 +1,5 @@
+import { backgroundScheduler } from './backgroundTaskScheduler';
+import { _backgroundScheduler } from './backgroundTaskScheduler';
 /**
  * CENTRALIZED LOGGER WRAPPER — Issue #176
  *
