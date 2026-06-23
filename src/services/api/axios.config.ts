@@ -28,6 +28,7 @@
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { getEnv } from "../../config";
+import { getImageAcceptHeader } from "../../utils/imageFormat";
 import { appLogger } from "../../utils/logger";
 import { getAccessToken, getRefreshToken, saveTokens } from "../secureStorage";
 import { requestQueue } from "./requestQueue";
@@ -94,6 +95,22 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// ─── Image format request interceptor ──────────────────────────────────────
+// Negotiate WebP format via Accept header for image-serving API endpoints.
+
+const IMAGE_PATH_PATTERNS = [/\/images?\//, /\/uploads?\//, /\/avatars?\//, /\/media\//, /\.(png|jpg|jpeg|gif|webp|avif)/i];
+
+apiClient.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const url = config.url ?? '';
+    if (IMAGE_PATH_PATTERNS.some((pattern) => pattern.test(url))) {
+      config.headers.Accept = getImageAcceptHeader();
+    }
     return config;
   },
   (error) => Promise.reject(error),

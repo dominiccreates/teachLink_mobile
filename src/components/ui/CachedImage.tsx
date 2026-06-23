@@ -1,6 +1,7 @@
 import { Image as ExpoImage, ImageProps as ExpoImageProps } from 'expo-image';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { buildImageUrl } from '../../utils/imageFormat';
 import { ImageCache } from '../../utils/imageCache';
 import logger from '../../utils/logger';
 
@@ -63,6 +64,9 @@ export const CachedImage: React.FC<CachedImageProps> = ({
   const [isLoading, setIsLoading] = useState(!!uri);
   const [error, setError] = useState<Error | null>(null);
 
+  // Convert the original URI to its optimal format (e.g. WebP with quality params)
+  const optimizedUri = useMemo(() => buildImageUrl(uri), [uri]);
+
   // ─── Prefetch image on mount or when URI changes ──────────────────────────
 
   useEffect(() => {
@@ -71,11 +75,11 @@ export const CachedImage: React.FC<CachedImageProps> = ({
       return;
     }
 
-    if (autoPrefetch) {
+    if (autoPrefetch && optimizedUri) {
       setIsLoading(true);
-      ImageCache.prefetchImages([uri])
+      ImageCache.prefetchImages([optimizedUri])
         .then(() => {
-          logger.debug(`✅ Image prefetched: ${uri}`);
+          logger.debug(`✅ Image prefetched: ${uri} → ${optimizedUri}`);
         })
         .catch(e => {
           logger.warn(`Failed to prefetch image: ${uri}`, e);
@@ -83,7 +87,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
           onLoadError?.(e instanceof Error ? e : new Error(String(e)));
         });
     }
-  }, [uri, autoPrefetch, onLoadError]);
+  }, [optimizedUri, uri, autoPrefetch, onLoadError]);
 
   // ─── Handle loading complete ───────────────────────────────────────────────
 
@@ -91,7 +95,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
     setIsLoading(false);
     setError(null);
     onLoadComplete?.();
-    logger.debug(`✅ CachedImage rendered: ${uri}`);
+    logger.debug(`✅ CachedImage rendered: ${optimizedUri}`);
   };
 
   // ─── Handle loading error ──────────────────────────────────────────────────
@@ -101,19 +105,19 @@ export const CachedImage: React.FC<CachedImageProps> = ({
     setIsLoading(false);
     setError(error);
     onLoadError?.(error);
-    logger.warn(`Failed to load image: ${uri}`, error);
+    logger.warn(`Failed to load image: ${optimizedUri}`, error);
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
-  if (!uri) {
+  if (!uri || !optimizedUri) {
     return null;
   }
 
   return (
     <View style={[styles.container, style]}>
       <ExpoImage
-        source={{ uri }}
+        source={{ uri: optimizedUri }}
         onLoadingComplete={handleLoadingComplete}
         onError={handleError}
         accessibilityLabel={alt}
