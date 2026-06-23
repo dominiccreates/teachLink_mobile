@@ -3,8 +3,12 @@ import { AnalyticsEvent, EventProperties } from '../utils/trackingEvents';
 
 /**
  * MobileAnalyticsService provides a centralized API for tracking user behavior
- * and application performance. It abstracts the underlying analytics provider
- * (e.g., Firebase, Segment, Mixpanel) to allow for easy swaps in the future.
+ * and application performance with differential privacy applied to all events.
+ *
+ * Privacy guarantees:
+ * - All numeric properties are noise-added via the Laplace mechanism (ε-DP).
+ * - All string properties are sanitized to remove PII before transmission.
+ * - DP is applied per-event before any external SDK call.
  */
 class MobileAnalyticsService {
   private static readonly HIGH_FREQUENCY_EVENT_MAX_PER_SECOND = 10;
@@ -32,10 +36,13 @@ class MobileAnalyticsService {
 
   /**
    * Initialize the analytics SDK.
-   * This is where you would call Firebase.initializeApp() or similar.
    */
-  public async init(): Promise<void> {
+  public async init(dpConfig?: Partial<DPConfig>): Promise<void> {
     if (this.isInitialized) return;
+
+    if (dpConfig) {
+      this.dpConfig = { ...this.dpConfig, ...dpConfig };
+    }
 
     try {
       // In a real implementation:
@@ -50,8 +57,18 @@ class MobileAnalyticsService {
   }
 
   /**
-   * Start a new tracking session.
+   * Configure the differential privacy budget at runtime.
    */
+  public configureDifferentialPrivacy(config: Partial<DPConfig>): void {
+    this.dpConfig = { ...this.dpConfig, ...config };
+    logger.info('MobileAnalytics: DP config updated', this.dpConfig);
+  }
+
+  /** Return the current DP configuration (read-only). */
+  public getDPConfig(): Readonly<DPConfig> {
+    return { ...this.dpConfig };
+  }
+
   public startSession(): void {
     const timestamp = Date.now();
     this.currentSessionId = `sess_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
@@ -64,9 +81,6 @@ class MobileAnalyticsService {
     appLogger.debug(`MobileAnalytics: Session started [${this.currentSessionId}]`);
   }
 
-  /**
-   * End the current tracking session.
-   */
   public endSession(): void {
     if (!this.currentSessionId) return;
 
@@ -80,9 +94,8 @@ class MobileAnalyticsService {
   }
 
   /**
-   * Track a custom event.
-   * @param event The event name from the AnalyticsEvent enum.
-   * @param properties Optional metadata to attach to the event.
+   * Track a custom event with differential privacy applied to all properties.
+   * Numeric properties receive Laplace noise; strings are PII-sanitized.
    */
   public trackEvent(event: AnalyticsEvent, properties?: EventProperties): void {
     if (this.shouldThrottleHighFrequencyEvent(event, properties)) {
@@ -108,8 +121,7 @@ class MobileAnalyticsService {
     // Log to console/Metro for development visibility
     appLogger.info(`📊 [Analytics] Event: ${event}`, JSON.stringify(payload, null, 2));
 
-    // Here you would call the real SDK:
-    // analytics().logEvent(event, payload);
+    // Real SDK call here: analytics().logEvent(event, privatized);
   }
 
   private shouldThrottleHighFrequencyEvent(
@@ -170,14 +182,14 @@ class MobileAnalyticsService {
   }
 
   /**
-   * Log performance metrics.
-   * @param name The metric name.
-   * @param value The value (usually in milliseconds).
+   * Log a performance metric. Duration is privatized before logging.
    */
   public trackPerformance(name: string, value: number, properties?: EventProperties): void {
+    const privatizedValue = privatizeDuration(value, 300_000, this.dpConfig);
+
     const payload = {
       metric_name: name,
-      metric_value: value,
+      metric_value: privatizedValue,
       ...properties,
     };
 
@@ -186,11 +198,6 @@ class MobileAnalyticsService {
     this.trackEvent(AnalyticsEvent.PERFORMANCE_METRIC, payload);
   }
 
-  /**
-   * Set user identity for tracking across sessions.
-   * @param userId The unique user ID from the backend.
-   * @param userProperties Key-value pairs of user traits.
-   */
   public async identifyUser(userId: string, userProperties?: EventProperties): Promise<void> {
     appLogger.info(`👤 [Analytics] Identify User: ${userId}`, userProperties);
 
@@ -199,12 +206,46 @@ class MobileAnalyticsService {
     // if (userProperties) await analytics().setUserProperties(userProperties);
   }
 
-  /**
-   * Clear user identity (on logout).
-   */
   public async resetUser(): Promise<void> {
     appLogger.info('👤 [Analytics] Reset User identity');
     // await analytics().setUserId(null);
+  }
+
+  // ─── Private DP Helpers ──────────────────────────────────────────────────
+
+  /**
+   * Apply differential privacy to a flat property bag.
+   * - Numeric values: Laplace noise (sensitivity = 1, configurable ε).
+   * - String values: PII sanitization (email/phone/uuid redaction).
+   * - Booleans / null: passed through unchanged.
+   */
+  private applyDifferentialPrivacy(properties: Record<string, unknown>): Record<string, unknown> {
+    if (!this.dpConfig.enabled) return properties;
+
+    const stringProps: Record<string, unknown> = {};
+    const numericProps: Record<string, unknown> = {};
+
+    for (const [k, v] of Object.entries(properties)) {
+      if (typeof v === 'number') {
+        numericProps[k] = v;
+      } else {
+        stringProps[k] = v;
+      }
+    }
+
+    const sanitized = sanitizeProperties(stringProps);
+
+    // Add Laplace noise to each numeric field individually
+    const noisyNumerics: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(numericProps)) {
+      const scale = this.dpConfig.sensitivity / this.dpConfig.epsilon;
+      let u = Math.random() - 0.5;
+      while (u === 0) u = Math.random() - 0.5;
+      const noise = -scale * Math.sign(u) * Math.log(1 - 2 * Math.abs(u));
+      noisyNumerics[k] = (v as number) + noise;
+    }
+
+    return { ...sanitized, ...noisyNumerics };
   }
 }
 

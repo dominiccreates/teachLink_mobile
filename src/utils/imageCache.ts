@@ -1,6 +1,9 @@
+import { backgroundScheduler } from '../services/backgroundTaskScheduler';
 import { Image } from 'expo-image';
+
 import logger from './logger';
 import { buildImageUrl } from './imageFormat';
+import { _backgroundScheduler } from '../services/backgroundTaskScheduler';
 
 export class ImageCache {
   /**

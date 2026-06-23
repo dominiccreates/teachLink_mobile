@@ -253,6 +253,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabsRow}
+        removeClippedSubviews={true}
       >
         {tabs.map((tab) => (
           <TouchableOpacity
@@ -421,6 +422,7 @@ export const PaymentHistory: React.FC<PaymentHistoryProps> = ({
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}

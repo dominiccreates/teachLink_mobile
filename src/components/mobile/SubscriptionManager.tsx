@@ -326,7 +326,7 @@ export const SubscriptionManager: React.FC<SubscriptionManagerProps> = ({
         )}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} removeClippedSubviews={true}>
         {/* Current plan */}
         {renderCurrentPlan()}
 
