@@ -6,7 +6,6 @@ import {
   View,
   ViewStyle,
   TextStyle,
-  StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDynamicFontSize } from '../../hooks';
@@ -93,15 +92,12 @@ function PrimaryButton({
           colors={['#20afe7', '#2c8aec', '#586ce9']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          style={[
-            styles.button,
-            styles.gradientButton,
-            {
-              paddingHorizontal: config.paddingHorizontal,
-              paddingVertical: config.paddingVertical,
-              borderRadius: config.borderRadius,
-            },
-          ]}
+          className="flex-row items-center justify-center gap-2 shadow-sm shadow-[#20afe7]/30 elevation-4"
+          style={{
+            paddingHorizontal: config.paddingHorizontal,
+            paddingVertical: config.paddingVertical,
+            borderRadius: config.borderRadius,
+          }}
         >
           {loading ? (
             <ActivityIndicator color="white" size="small" />
@@ -110,8 +106,8 @@ function PrimaryButton({
               {icon}
               <Text
                 allowFontScaling={false}
+                className="font-semibold"
                 style={[
-                  styles.buttonText,
                   { fontSize: config.fontSize, color: '#ffffff' },
                   textStyle,
                 ]}
@@ -135,8 +131,8 @@ function PrimaryButton({
         accessibilityLabel={buttonLabel}
         accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled: isDisabled, busy: loading }}
+        className="flex-row items-center justify-center gap-2"
         style={[
-          styles.button,
           {
             backgroundColor: '#19c3e6',
             paddingHorizontal: config.paddingHorizontal,
@@ -154,8 +150,8 @@ function PrimaryButton({
             {icon}
             <Text
               allowFontScaling={false}
+              className="font-semibold"
               style={[
-                styles.buttonText,
                 { fontSize: config.fontSize, color: '#ffffff' },
                 textStyle,
               ]}
@@ -178,8 +174,8 @@ function PrimaryButton({
       accessibilityLabel={buttonLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
+      className="flex-row items-center justify-center gap-2"
       style={[
-        styles.button,
         {
           borderWidth: 2,
           borderColor: '#19c3e6',
@@ -199,7 +195,11 @@ function PrimaryButton({
           {icon}
           <Text
             allowFontScaling={false}
-            style={[styles.buttonText, { fontSize: config.fontSize, color: '#19c3e6' }, textStyle]}
+            className="font-semibold"
+            style={[
+              { fontSize: config.fontSize, color: '#19c3e6' },
+              textStyle,
+            ]}
           >
             {title}
           </Text>

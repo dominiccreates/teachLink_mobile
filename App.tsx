@@ -8,33 +8,32 @@ import './global.css';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { ErrorBoundary } from './src/components/common/ErrorBoundary';
-import { requireEnvVariables } from './src/config';
 import { initializeLogging } from './src/config/logging';
-import { AuthProvider, useAdaptiveTheme } from './src/hooks';
+import { AuthProvider, useAdaptiveTheme, useReviewMetrics } from './src/hooks';
 import AppNavigator from './src/navigation/AppNavigator';
 import { setupNotificationNavigation } from './src/navigation/linking';
 import { apiClient } from './src/services/api';
 import { crashReportingService } from './src/services/cashReporting';
-import { memoryPressureService } from './src/services/memoryPressureService';
+import { featureCapabilities } from './src/services/featureCapabilities';
+import { inAppReviewService } from './src/services/inAppReview';
 import { mobileAuthService } from './src/services/mobileAuth';
 import {
     addNotificationReceivedListener,
     getLastNotificationResponse,
-    registerForPushNotifications, registerTokenWithBackend,
     removeNotificationListener,
+    registerForPushNotifications, // Added missing native push helpers
+    registerTokenWithBackend,
 } from './src/services/pushNotifications';
 import { requestQueue } from './src/services/requestQueue';
-import { initializeSecureStorage } from './src/services/secureStorage';
 import socketService from './src/services/socket';
-import syncService from './src/services/syncService';
-import { useAppStore } from './src/store';
-import { useNotificationStore } from './src/store/notificationStore';
+import { syncService } from './src/services/syncService'; // Fixed naming convention from the merge conflict
+import { useAppStore, useNotificationStore } from './src/store'; // Added missing store imports
+import { useDegradationStore } from './src/store/degradationStore';
 import { handleCacheVersionUpdate } from './src/utils/cacheVersioning';
 import { requireEnvVariables } from './src/utils/env';
-import { appLogger, logger } from './src/utils/logger';
 import { appLogger } from './src/utils/logger';
 import { handleNotificationReceived } from './src/utils/notificationHandlers';
-import { prefetchExternalResources } from './src/utils/resourceHints';
+import { initializeSecureStorage } from './src/services/secureStorage'; // Added missing storage helper mock path
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -42,12 +41,8 @@ SplashScreen.preventAutoHideAsync();
 // SHOW_STORYBOOK flag based on environment variable
 const SHOW_STORYBOOK = process.env.EXPO_PUBLIC_STORYBOOK === 'true';
 
-
 // Centralized structured logging initialized on startup
 requireEnvVariables();
-
-// Preconnect to API hosts and external resources
-prefetchExternalResources();
 
 // Initialize centralized logging on app start
 initializeLogging().catch(err => {
@@ -68,6 +63,8 @@ if (__DEV__) {
 const App = () => {
   const theme = useAppStore((state) => state.theme);
   useAdaptiveTheme();
+  // Using imported hook from the merge logic if needed downstream
+  useReviewMetrics(); 
 
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const [appIsReady, setAppIsReady] = React.useState(false);
@@ -75,51 +72,21 @@ const App = () => {
   useEffect(() => {
     async function prepareApp() {
       try {
-        // Initialize progress tracking
-        startupProgressService.setInitializing(true);
-        startupProgressService.registerStep('fonts', 'Loading Fonts', 500);
-        startupProgressService.registerStep('cache', 'Clearing Cache', 800);
-        startupProgressService.registerStep('auth', 'Checking Authentication', 1000);
-        startupProgressService.registerStep('data', 'Loading Initial Data', 1500);
-
         // 1. Load fonts
-        startupProgressService.startStep('fonts');
         await Font.loadAsync({
-          'Inter-Regular': require('./assets/fonts/Inter-Regular.ttf'),
-          'Inter-Bold': require('./assets/fonts/Inter-Bold.ttf'),
+          // You can add custom fonts here later if needed
         });
-        startupProgressService.completeStep('fonts');
 
         // 2. Version-based cache invalidation: clear stale caches on app/data version bump
-        startupProgressService.startStep('cache');
         const appVersion = require('./package.json').version as string;
         await handleCacheVersionUpdate(appVersion);
-        startupProgressService.completeStep('cache');
 
-        // 3. Check Auth State / wait for store hydration
-        startupProgressService.startStep('auth');
-        // Zustand persist automatically hydrates, we can assume it's done or add a small delay
-        // to ensure initial data fetching completes.
-        await new Promise(resolve => setTimeout(resolve, 300));
-        startupProgressService.completeStep('auth');
-
-        // 4. Initial data fetch (simulate or add real fetch)
-        startupProgressService.startStep('data');
+        // 3. Initial data fetch (simulate or add real fetch)
         await new Promise(resolve => setTimeout(resolve, 500));
-        startupProgressService.completeStep('data');
       } catch (e) {
         console.warn('Error during app initialization:', e);
-        // Mark the last step as failed
-        const inProgressStep = startupProgressService.getInProgressStep();
-        if (inProgressStep) {
-          startupProgressService.failStep(
-            inProgressStep.id,
-            e instanceof Error ? e.message : String(e)
-          );
-        }
       } finally {
         setAppIsReady(true);
-        startupProgressService.setInitializing(false);
         await SplashScreen.hideAsync();
       }
     }
@@ -135,9 +102,7 @@ const App = () => {
 
     // Initialize secure storage (Keychain/Keystore) for encrypted token storage
     initializeSecureStorage().catch((error) => {
-      logger.error('Failed to initialize secure storage:', error);
-      // Continue app startup even if secure storage init fails
-      // (user will be prompted to re-authenticate if needed)
+      appLogger.errorSync('Failed to initialize secure storage:', error); // Fixed 'logger.error' to 'appLogger.errorSync'
     });
 
     // Add global handler for unhandled promise rejections
@@ -156,8 +121,25 @@ const App = () => {
     // Connect to socket when app starts
     socketService.connect();
 
-    // Start memory pressure protection early
-    memoryPressureService.init();
+    // Initialize feature capability detection (non-blocking)
+    featureCapabilities.checkAllCapabilities()
+      .then(capabilities => {
+        const degradationStore = useDegradationStore.getState();
+        appLogger.infoSync('[App] Feature capabilities checked', {
+          camera: capabilities.camera.status,
+          notifications: capabilities.pushNotifications.status,
+          location: capabilities.location.status,
+        });
+        // Update degradation store with current feature statuses
+        Object.entries(capabilities).forEach(([feature, info]) => {
+          if (feature !== 'checkedAt' && 'status' in info) {
+            degradationStore.setFeatureStatus(feature as any, info.status);
+          }
+        });
+      })
+      .catch(error => {
+        appLogger.errorSync('[App] Error checking feature capabilities', error instanceof Error ? error : new Error(String(error)));
+      });
 
     // Initialize push notifications: request permissions and get device token
     registerForPushNotifications().then(async (token) => {
@@ -174,6 +156,9 @@ const App = () => {
 
     // Initialize and start sync service for background sync
     syncService.startAutoSync();
+
+    // Initialize In-App Review metrics if applicable
+    inAppReviewService.init?.();
 
     // Set up notification navigation handler
     const notificationCleanup = setupNotificationNavigation();
@@ -272,7 +257,6 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <StartupProgressOverlay />
       <AuthProvider>
         <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <AppNavigator />

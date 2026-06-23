@@ -1,9 +1,10 @@
 import { render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 
-import { CachedImage } from '@/components/ui/CachedImage';
-import { usePrefetchImages } from '@/hooks/usePrefetchImages';
-import { ImageCache } from '@/utils/imageCache';
+import { CachedImage } from '../../components/ui/CachedImage';
+import { usePrefetchImages } from '../../hooks/usePrefetchImages';
+import { useSettingsStore } from '../../store/settingsStore';
+import { ImageCache } from '../../utils/imageCache';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -165,6 +166,43 @@ describe('Image Cache Integration - Issue #143', () => {
 
       const image = getByTestId('cached-image');
       expect(image.props.style).toContainEqual(customStyle);
+    });
+
+    it('should lower image quality and bypass prefetching when dataSaverEnabled is true', async () => {
+      useSettingsStore.setState({ dataSaverEnabled: true });
+      const testUri = 'https://example.com/image@2x.jpg?width=400';
+      const prefetchSpy = jest.spyOn(ImageCache, 'prefetchImages');
+
+      const { getByTestId } = render(
+        <CachedImage uri={testUri} testID="cached-image" autoPrefetch={true} />
+      );
+
+      const image = getByTestId('cached-image');
+      expect(Array.isArray(image.props.source)).toBe(true);
+      expect(image.props.source[0].uri).toContain('format=webp');
+      expect(image.props.source[1].uri).toContain('format=png');
+      expect(image.props.placeholder.uri).toContain('lqip=1');
+
+      expect(prefetchSpy).not.toHaveBeenCalled();
+
+      // Restore settings
+      useSettingsStore.setState({ dataSaverEnabled: false });
+    });
+
+    it('should build progressive image sources with LQIP placeholder', () => {
+      const testUri = 'https://example.com/avatar.jpg';
+
+      const { getByTestId } = render(
+        <CachedImage uri={testUri} targetWidth={100} targetHeight={100} testID="cached-image" />
+      );
+
+      const image = getByTestId('cached-image');
+      expect(image.props.source[0].uri).toContain('format=webp');
+      expect(image.props.source[0].uri).toContain('dpr=2');
+      expect(image.props.source[0].uri).toContain('w=200');
+      expect(image.props.source[1].uri).toContain('format=png');
+      expect(image.props.placeholder.uri).toContain('lqip=1');
+      expect(image.props.transition).toBe(250);
     });
   });
 
@@ -345,6 +383,26 @@ describe('Image Cache Integration - Issue #143', () => {
       await waitFor(() => {
         expect(onError).toHaveBeenCalled();
       });
+    });
+
+    it('should bypass prefetching when dataSaverEnabled is true', async () => {
+      useSettingsStore.setState({ dataSaverEnabled: true });
+      const urls = ['https://example.com/image1.jpg'];
+      const prefetchSpy = jest.spyOn(ImageCache, 'prefetchImages');
+
+      const TestComponent = () => {
+        usePrefetchImages(urls, { auto: true });
+        return null;
+      };
+
+      render(<TestComponent />);
+
+      await waitFor(() => {
+        expect(prefetchSpy).not.toHaveBeenCalled();
+      });
+
+      // Restore
+      useSettingsStore.setState({ dataSaverEnabled: false });
     });
   });
 
