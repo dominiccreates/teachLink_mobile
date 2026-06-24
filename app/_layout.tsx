@@ -5,7 +5,7 @@ import { Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import { MemoryProfilerOverlay } from '../components/DevTools';
+import { CacheStatusOverlay, MemoryProfilerOverlay } from '../components/DevTools';
 import { RetryErrorBoundary } from '../components/ErrorBoundary/RetryErrorBoundary';
 import '../global.css'; // NativeWind CSS
 import { AnalyticsProvider, ErrorBoundary, OfflineIndicatorProvider } from '../src/components';
@@ -156,7 +156,12 @@ const RootLayout = () => {
                 <Stack screenOptions={{ headerShown: false }} />
               </OfflineIndicatorProvider>
             </GestureHandlerRootView>
-            {__DEV__ && <MemoryProfilerOverlay />}
+            {__DEV__ && (
+              <>
+                <MemoryProfilerOverlay />
+                <CacheStatusOverlay />
+              </>
+            )}
           </AnalyticsProvider>
         </KeyboardDelegateProvider>
       </RetryErrorBoundary>
